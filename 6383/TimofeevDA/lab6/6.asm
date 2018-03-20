@@ -25,6 +25,8 @@ DATA SEGMENT
     ;------------  PARAM_BLOCK  ------------------;
     PARAMS dw 0 ; сегментный адрес среды
     dw DATA, offset CMD_PROMT ;сегмент и смещение командной строки
+    dd 0
+    dd 0
     ;---------  END OF PARAM_BLOCK  --------------;
     CMD_PROMT db 0, ''
     PATH_PROMT db 81h dup(0)
