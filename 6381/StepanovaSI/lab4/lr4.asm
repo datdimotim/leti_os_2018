@@ -1,24 +1,10 @@
-STACK SEGMENT STACK
+INT_STACK SEGMENT STACK
 	DW 64 DUP (?)
-STACK ENDS
-;---------------------------------------------------------------
-DATA SEGMENT
-	ALREADY_LOADED DB 'User interruption is already loaded!',0DH,0AH,'$'
-	UNLOADED DB 'User interruption is unloaded!',0DH,0AH,'$'
-	IS_LOADED DB 'User interruption is loaded!',0DH,0AH,'$'
-DATA ENDS
+INT_STACK ENDS
 ;---------------------------------------------------------------
 CODE SEGMENT
  ASSUME CS:CODE, DS:DATA, ES:DATA, SS:STACK
 START: JMP MAIN
-;---------------------------------------------------------------
-PRINT PROC NEAR ;печать на экран 
-	push ax
-	mov ah, 09h
-	int 21h
-	pop ax
-	ret
-PRINT ENDP
 ;---------------------------------------------------------------
 setCurs PROC ;установка позиции курсора; установка на строку 25 делает курсор невидимым
 	push AX
@@ -56,10 +42,19 @@ ROUT_DATA:
 	KEEP_IP DW 0 ;и смещения прерывания
 	KEEP_PSP DW 0 ;и PSP
 	DELETION DB 0 ;переменная, по которой определяется, надо выгружать прерывание или нет
+	KEEP_SS DW 0
+	KEEP_AX DW 0	
+	KEEP_SP DW 0 
 	COUNTER DB 'Total number of interrupts: 0000 $' ;счётчик
 ROUT_CODE:
-	push AX ;сохранение изменяемых регистров
-	push DX
+	mov KEEP_AX, AX ;сохраняем ax
+	mov KEEP_SS, SS ;сохраняем стек
+	mov KEEP_SP, SP
+	mov AX, seg INT_STACK ;устанавливаем собственный стек
+	mov SS, AX
+	mov SP, 64h
+	mov AX, KEEP_AX
+	push DX ;сохранение изменяемых регистров
 	push DS
 	push ES
 	;обработка прерывания
@@ -142,6 +137,8 @@ END_CALC:
 
 	;восстановление вектора прерывания
 ROUT_REC:
+	;mov dx,offset UNLOADED ;вывод сообщения
+	;call PRINT
 	CLI ;запрещение прерывания
 	mov DX,KEEP_IP
 	mov AX,KEEP_CS
@@ -162,8 +159,11 @@ ROUT_END:
 	pop ES ;восстановление регистров
 	pop DS
 	pop DX
-	pop AX 
+	mov SS, KEEP_SS
+	mov SP, KEEP_SP
+	mov AX, KEEP_AX
 	iret
+LAST_BYTE:
 ROUT ENDP
 ;---------------------------------------------------------------
 CHECK_INT PROC ;проверка прерывания
@@ -246,6 +246,14 @@ SET_INT PROC ;установка написанного прерывания в 
 	ret
 SET_INT ENDP 
 ;---------------------------------------------------------------
+PRINT PROC NEAR ;печать на экран 
+	push ax
+	mov ah, 09h
+	int 21h
+	pop ax
+	ret
+PRINT ENDP
+;---------------------------------------------------------------
 MAIN:
 	mov AX,DATA
 	mov DS,AX
@@ -254,6 +262,16 @@ MAIN:
 	xor AL,AL
 	mov AH,4Ch ;выход 
 	int 21H
-LAST_BYTE:
 	CODE ENDS
+;---------------------------------------------------------------
+STACK SEGMENT STACK
+	DW 64 DUP (?)
+STACK ENDS
+;---------------------------------------------------------------
+DATA SEGMENT
+	ALREADY_LOADED DB 'User interruption is already loaded!',0DH,0AH,'$'
+	UNLOADED DB 'User interruption is unloaded!',0DH,0AH,'$'
+	IS_LOADED DB 'User interruption is loaded!',0DH,0AH,'$'
+DATA ENDS
+;---------------------------------------------------------------
 	END START
