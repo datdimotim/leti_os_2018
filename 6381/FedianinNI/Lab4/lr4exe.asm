@@ -34,13 +34,11 @@ OutputAL ENDP
 GetCursor PROC
 		push 	AX
 		push 	BX
-		;push 	DX
 		push 	CX
 		mov 	AH, 03H
 		mov 	BH, 0
 		int 	10H
 		pop 	CX
-		;pop 	DX
 		pop 	BX
 		pop 	AX
 GetCursor ENDP
@@ -71,7 +69,7 @@ Signature 		DB 'AAAA'
 KeepCS 			DW 0
 KeepIP 			DW 0
 KeepPSP			DW 0
-DeleteeteFLAG 		DB 0
+DeleteFlag 		DB 0
 Counter 		DB 0		;для накопления прерываний
 KeepSP			DW 0
 KeepSS			DW 0
@@ -87,8 +85,8 @@ RoutCode:
 		push 	DS
 		push 	ES
 		
-		cmp 	DeleteeteFLAG, 1
-		je 		Delete
+		cmp 	DeleteFlag, 1
+		je 		Del
 		
 		call 	GetCursor
 		push 	DX
@@ -110,7 +108,7 @@ Skip:
 	
 		jmp R_END
 	
-Delete: ;Восстанавливаем стандартный вектор прерывания:
+Del: ;Восстанавливаем стандартный вектор прерывания:
 		CLI
 		push	DS 
 		mov 	DX, KeepIP
@@ -178,14 +176,14 @@ CheckSignature 	PROC
 		; SI - смещение сигнатуры относительно начала функции прерывания
 		mov 	AX, 'AA'
 		cmp 	AX, ES:[BX+SI]
-		jne 	MarkIsNotLoaded
+		jne 	MarkNotLoaded
 		cmp 	AX, ES:[BX+SI+2]
-		jne 	MarkIsNotLoaded
-		jmp 	MarkIsLoaded 
+		jne 	MarkNotLoaded
+		jmp 	MarkLoaded 
 	
-MarkIsNotLoaded:
+MarkNotLoaded:
 		;Установка пользовательской функции прерывания
-		mov 	DX, OFFSET IS_LOADED
+		mov 	DX, OFFSET Loaded
 		call 	PRINT_A_STR
 		call 	SetINT
 		;Вычисление необходимого количества памяти для резидентной программы:
@@ -200,40 +198,41 @@ MarkIsNotLoaded:
 		mov 	AH, 31H
 		int 	21H 
 		
-MarkIsLoaded:
+MarkLoaded:
+		;Check for /un
 		push 	ES
 		push 	BX
 		mov 	BX, KeepPSP
 		mov 	ES, BX
 		cmp 	BYTE PTR ES:[82H],'/'
-		jne 	NoDeleteETE
+		jne 	NoDelete
 		cmp 	BYTE PTR ES:[83H],'u'
-		jne 	NoDeleteETE
+		jne 	NoDelete
 		cmp 	BYTE PTR ES:[84H],'n'
-		je 		DeleteETE
+		je 		Delete
 		
-NoDeleteETE:
+NoDelete:
 		pop 	BX
 		pop 	ES
 	
-		mov 	DX, OFFSET IS_ALR_LOADED
+		mov 	DX, OFFSET AlreadyLoaded
 		call 	PRINT_A_STR
 		ret
 
 ;Если un - убираем пользовательское прерывание
-DeleteETE:
+Delete:
 		pop 	BX
 		pop 	ES
 		mov 	BYTE PTR ES:[BX+SI+10], 1
-		mov 	DX, OFFSET IS_UNLOADED
+		mov 	DX, OFFSET Unloaded
 		call 	PRINT_A_STR
 		ret
 CheckSignature 	ENDP
 ;-------------------------------------------------------------------------
 DATA	SEGMENT
-	IS_LOADED 		DB 'User interruption is loaded',10,13,'$'
-	IS_ALR_LOADED 	DB 'User interruption is already loaded',10,13,'$'
-	IS_UNLOADED 	DB 'User interruption is unloaded',10,13,'$'
+	Loaded 			DB 'User interruption is loaded',0DH,0AH,'$'
+	AlreadyLoaded 	DB 'User interruption is already loaded',0DH,0AH,'$'
+	Unloaded 		DB 'User interruption is unloaded',0DH,0AH,'$'
 DATA 	ENDS
 		
 AStack	SEGMENT  STACK
