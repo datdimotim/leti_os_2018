@@ -170,6 +170,7 @@ CHECK_HANDLER proc near
 	cmp ax,es:[bx+si+2] 
 	je loaded
 	; Загружаем новый Обработчик
+not_loaded:
 	call SET_HANDLER
 	; Вычисляем память для резидента
 	mov dx,offset LAST_BYTE ; в байтах
