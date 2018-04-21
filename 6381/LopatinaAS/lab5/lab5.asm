@@ -26,8 +26,20 @@ INTERRUPTION PROC FAR
 	REQ_KEY_8	db 09h
 	REQ_KEY_9	db 0Ah
 	REQ_KEY_0	db 0Bh
+	INT_STACK	dw 64 dup (?)
+	KEEP_SS		dw ?
+	KEEP_AX		dw ?
+	KEEP_SP		dw ?
 
 begin:
+	mov KEEP_SS, ss
+ 	mov KEEP_SP, sp
+ 	mov KEEP_AX, ax
+ 	mov ax, seg INT_STACK
+ 	mov ss, ax
+ 	mov sp, 0
+ 	mov ax, KEEP_AX  
+	
 	in al,60h ;Cчитать ключ
 	
 	cmp al, REQ_KEY_6
@@ -44,6 +56,9 @@ begin:
 	
 	cmp al, REQ_KEY_0
 	je 	key0
+	
+	mov ss, KEEP_SS 
+ 	mov sp, KEEP_SP
 	
 	jmp dword ptr cs:[KEEP_IP] ;переходим на стандартный обработчик
 
@@ -77,7 +92,6 @@ begin:
 		push dx	
 	
 		mov ah, 05h ;функция, позволяющая записать символ в буфер клавиатуры
-		mov cl,al
 		mov ch, 00h ;символ в CL уже занесён ранее, осталось обнулить CH	
 		int 16h
 		or 	al, al	;проверка переполнения буфера
@@ -99,11 +113,15 @@ begin:
 	return:
 		pop dx    
 		pop cx
-		pop bx		
+		pop bx	
+		mov ax, KEEP_SS
+		mov ss, ax
+		mov ax, KEEP_AX
+		mov sp, KEEP_SP
 		iret
 INTERRUPTION ENDP
 ;----------------------------
-inter_end:
+last_byte:
 INSTALL_CHECK PROC NEAR	;Проверка установки прерывания
 	push bx
 	push dx
@@ -255,7 +273,7 @@ MAIN  PROC FAR
 ;Загрузка резидента
 not_resident: 
 	call INSTALL_INTER 
-	lea dx, inter_end
+	lea dx, last_byte
 	mov cl, 04h
 	shr dx, cl
 	add dx, 1Bh
