@@ -41,7 +41,7 @@ BYTE_TO_HEX PROC near
 	ret
 BYTE_TO_HEX ENDP
 ;---------------------------------------
-; Функция освобождения лишней памяти √
+; Функция освобождения лишней памяти
 FREE_MEM PROC
 	; Выводим промежуточное сообщение:
 		printl STR_FREE_MEM
@@ -83,7 +83,7 @@ FREE_MEM PROC
 	ret
 FREE_MEM ENDP
 ;---------------------------------------
-; Процедура выделения памяти для оверлейного сегмента. √
+; Процедура выделения памяти для оверлейного сегмента.
 ALLOC_MEM PROC
 	push ds
 	push dx
@@ -128,60 +128,91 @@ ALLOC_MEM PROC
 	pop dx
 	pop ds
 	printl STR_PROC_DONE
-	mov OVERLAY_ADDR+2,ax
+	mov word ptr OVERLAY_ADDR+2,ax
 	ret
 ALLOC_MEM ENDP
 ;---------------------------------------
-; Процедура поиска файла оверлея √
+; Процедура поиска файла оверлея
+; В регистре bp - название файла оверлея, лежащего в той же папке
 FIND_OVERLAY_PATH PROC
 	; Выводим промежуточное сообщение:
 		printl STR_FIND_OVERLAY_PATH
 
-	xor cx,cx
-	mov cl,es:[80h]
-	test cx,cx
-	jz FIND_OVERLAY_STD
-	cmp cx,50h
-	ja FIND_OVERLAY_TOO_LONG_TAIL ; Если хвост длиннее строки, то выводим ошибку
-	; Копируем хвост в OVERLAY_PATH:
-		dec cx
-		 ; Сохраняем регистры
-		push es
-		push ds
-		; Меняем местами es,ds
-		push es
-		push ds
-		pop es
-		pop ds
-		lea di,OVERLAY_PATH
-		mov si,82h
-	rep	movsb ; копируем cx символов из строки DS:SI в строку ES:DI
-		; Восстанавливаем регистры
-		pop ds
-		pop es
-		mov byte ptr [di+1],0 ; Заканчиваем OVERLAY_PATH нулём
-		lea dx,OVERLAY_PATH
-		jmp FIND_OVERLAY_END
-
-	FIND_OVERLAY_STD:
-		lea dx,STD_OVERLAY_PATH
-		jmp FIND_OVERLAY_END
-	FIND_OVERLAY_TOO_LONG_TAIL:
-		lea dx,STR_ERR_TOO_LONG_TAIL
-		print
-		mov ax,4c00h
-		int 21h
-	FIND_OVERLAY_END:
+	push es ; Сохраняем PSP
+	
+	; Переходим в область среды
+	mov ax, es:[2ch]
+	mov es, ax
+	; Пропускаем переменные среды:
+	; Сканируем строку es:di, пока байт не равен 0
+	mov al, 0 ; Какой байт ищем
+	mov di, 0 ; Указатель на область данных в области среды
+	FIND_OVERLAY_SKIP_BEGIN:
+	mov cx, 512 ; Максимальный размер блока поиска
+repne scasb ; Повторяем, пока анализируемый байт не равен al(0)
+	cmp es:[di],al ; Если второй байт - не ноль, продолжаем пропускать
+	jne FIND_OVERLAY_SKIP_BEGIN
+	
+	add di, 3 ; Пропускаем 001
+	
+	; Считаем длину строки, содержащей полный путь к программе
+	push di
+	mov cx,100 ; Максимальная длина строки
+repne scasb
+	mov ax,di ; Кладем в ax адрес символа, следующим за строкой
+	pop di ; Кладем в di начало строки
+	sub ax,di 
+	dec ax ; Получаем в ax количество символов в строке пути к программе
+	mov cx,ax ; Кладём в cx количество копируемых символов
+	
+	; Копируем строку
+	push ds
+	push es
+	pop ds
+	pop es ; Поменяли местами es(область среды) и ds(сегмент данных)
+	mov si,di ; Кладем в ds:si начало копируемой строки
+	lea di,OVERLAY_PATH ; Кладем в es:di начало строки, в которую копируем
+rep movsb ; Копируем cx байт из ds:si в es:di
+	mov byte ptr es:[di],0 ; Завершаем скопированную строку нулем
+		
+	; Заменяем название текущей программы названием оверлея
+	mov cx,100
+	mov al,'\' ; Ищем символ '\'
+	std ; Идем в обратную сторону, es:di - конец скопированной строки
+repne scasb
+	cld ; Возвращаем стандартное направление прохода
+	add di,2 ; Переходим на символ за символом '\'
+	mov cx,13 ; Имя оверлея - 13 байтов, включая 0
+	mov ax,data
+	mov ds,ax
+	mov si,bp
+	; Установили ds:si на копируемую строку, es:di - на то, куда копируем
+rep movsb ; Выполняем копирование
+	
+	pop es ; Восстанавливаем PSP
+	
+	lea dx,OVERLAY_PATH ; Кладём указатель на полное имя программы в dx
+	
 	printl STR_PROC_DONE
 	ret
 FIND_OVERLAY_PATH ENDP
 ;---------------------------------------
+; TODO: в какой переменной хранить название запускаемого оверлея?
 ; Процедура запуска оверлея
-; В DS:DX - указатель на строку с именем файла оверлея,
-; В ES:BX - указатель на блок параметров
+; Принимает в bp указатель на имя запускаемого оверлея из того же каталога, что и сама программа
 RUN_OVERLAY PROC
+	push es
+	push ds
+	; Ищем файл с оверлеем, устанавливаем DS:DX на строку, содержащую имя файла с оверлеем
+	call FIND_OVERLAY_PATH
+	; Выделяем память для оверлея
+	call ALLOC_MEM
+	; Генерируем блок параметров
+	mov PARAMBLOCK,ax 
+	pop es ; В ES кладём DS
+	lea bx, PARAMBLOCK ; ES:BX указывает на блок параметров
 	; Выводим промежуточное сообщение:
-		printl STR_RUN_OVERLAY
+	printl STR_RUN_OVERLAY
 
 	mov CS:KEEP_SP, SP
 	mov CS:KEEP_SS, SS
@@ -229,7 +260,7 @@ RUN_OVERLAY PROC
 	OVERLAY_DELETE_SUCCESS:
 	printl STR_PROC_DONE
 	pop ax
-
+	pop es
 	ret
 	; Переменные для хранения регистров
 	KEEP_SP dw 0
@@ -286,22 +317,29 @@ PROCESS_LOADER_ERRORS ENDP
 BEGIN:
 	mov ax,data
 	mov ds,ax
-
 	; Освобождаем лишнюю память
 	call FREE_MEM
-	; Ищем файл с оверлеем, устанавливаем DS:DX на строку, содержащую имя файла с оверлеем
-	call FIND_OVERLAY_PATH
-	; Выделяем память для оверлея
-	call ALLOC_MEM
-	; Генерируем блок параметров
-	mov PARAMBLOCK,ax 
-	push es
-	push ds
-	pop es ; В ES кладём DS
-	lea bx, PARAMBLOCK ; ES:BX указывает на блок параметров
-	; Запускаем оверлей
+	
+	push dx
+	lea dx,STRENDL
+	print
+	pop dx
+	printl STR_FIRST_OVERLAY
+	
+	; Запускаем оверлей Overlay1.com
+	lea bp, STR_OVL1
 	call RUN_OVERLAY
-	pop es
+	
+	push dx
+	lea dx,STRENDL
+	print
+	pop dx
+	printl STR_SECOND_OVERLAY
+	
+	; Запускаем оверлей Overlay2.com
+	lea bp, STR_OVL2
+	call RUN_OVERLAY
+	
 	xor AL,AL
 	mov AH,4Ch
 	int 21H
@@ -329,6 +367,8 @@ DATA SEGMENT
 		STR_ERR_UNKNWN				db 'Unknown error$'
 
 	; Строки, оповещающие о работе функций
+		STR_FIRST_OVERLAY		db 'First overlay:$'
+		STR_SECOND_OVERLAY		db 'Second overlay:$'
 		STR_FREE_MEM			db 'Freeing memory:$'
 		STR_ALLOC_MEM			db 'Allocating memory:$'
 		STR_FIND_OVERLAY_PATH	db 'Finding overlay path:$'
@@ -342,8 +382,9 @@ DATA SEGMENT
 	; Блок параметров. Перед загрузкой дочерней программы на него должен указывать ES:BX
 	PARAMBLOCK	dw 0 ; Сегментный адрес, по которому загружается оверлей
 				dd 0 ; Сегментный адрес и смещение параметров командной строки
-	OVERLAY_PATH  		db 53h dup ('$')
-	STD_OVERLAY_PATH	db 'OVERLAY.EXE',0
+	OVERLAY_PATH  		db 105 dup ('$')
+	STR_OVL1			db 'Overlay1.com',0
+	STR_OVL2			db 'Overlay2.com',0
 
 DATA ENDS
 ; СТЕК
