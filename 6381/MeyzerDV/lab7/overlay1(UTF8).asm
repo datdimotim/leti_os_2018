@@ -50,7 +50,7 @@
 		pop BX
 		ret
 	WRD_TO_HEX ENDP
-	PRTSTRINFO 	DB 'Segment address of an overlay: '
+	PRTSTRINFO 	DB 'Segment address of a first overlay: '
 	PRTSTR 		DB '    ',0DH,0AH,'$'
 OSEG ENDS
 END

@@ -15,6 +15,18 @@ printl macro a
 	pop dx
 	pop ax
 endm
+debug macro r
+	pushf
+	push ax
+	push di
+	mov ax,r
+	lea di,STRTEST+3
+	call WRD_TO_HEX
+	printl STRTEST
+	pop di
+	pop ax
+	popf
+endm
 CODE SEGMENT
  ASSUME CS:CODE, DS:DATA, ES:DATA, SS:STACKSEG
 START: JMP BEGIN
@@ -41,8 +53,30 @@ BYTE_TO_HEX PROC near
 	ret
 BYTE_TO_HEX ENDP
 ;---------------------------------------
-; Функция освобождения лишней памяти
+; перевод в 16с/с 16-ти разрядного числа
+; в AX - число, DI - адрес последнего символа
+WRD_TO_HEX PROC far
+	push BX
+	mov BH,AH
+	call BYTE_TO_HEX
+	mov [DI],AH
+	dec DI
+	mov [DI],AL
+	dec DI
+	mov AL,BH
+	call BYTE_TO_HEX
+	mov [DI],AH
+	dec DI
+	mov [DI],AL
+	pop BX
+	ret
+WRD_TO_HEX ENDP
+;---------------------------------------
+; Функция освобождения лишней памяти √
 FREE_MEM PROC
+	push ax
+	push bx
+	push dx
 	; Выводим промежуточное сообщение:
 		printl STR_FREE_MEM
 	; Вычисляем в BX необходимое количество памяти для этой программы в параграфах
@@ -80,10 +114,14 @@ FREE_MEM PROC
 
 	FREE_MEM_SUCCESS:
 	printl STR_PROC_DONE
+	pop dx
+	pop bx
+	pop ax
 	ret
 FREE_MEM ENDP
 ;---------------------------------------
 ; Процедура выделения памяти для оверлейного сегмента.
+; Изменяемое значение - ax - адрес сегмента выделенной памяти
 ALLOC_MEM PROC
 	push ds
 	push dx
@@ -112,16 +150,16 @@ ALLOC_MEM PROC
 		mov dx,word ptr ES:[BX+2]
 		mov bx,10h
 		div bx ; Получаем в ax размер файла в параграфах
-		inc bx
-		mov bx,ax
+		inc ax
 
 	; Запрашиваем объем памяти:
 		mov ah,48h
 		int 21h
 		jnc ALLOC_MEM_DONE
-		printl STR_ERR_ALLOC_MEM
-		mov ax,4c00h
-		int 21
+			printl STR_ERR_ALLOC_MEM
+			call PROCESS_LOADER_ERRORS
+			mov ax,4c00h
+			int 21h
 		ALLOC_MEM_DONE:
 		pop es
 		pop bx
@@ -129,16 +167,22 @@ ALLOC_MEM PROC
 	pop ds
 	printl STR_PROC_DONE
 	mov word ptr OVERLAY_ADDR+2,ax
+	mov PARAMBLOCK,ax
 	ret
 ALLOC_MEM ENDP
 ;---------------------------------------
-; Процедура поиска файла оверлея
+; Процедура поиска файла оверлея √
 ; В регистре bp - название файла оверлея, лежащего в той же папке
+; Изменяемое значение - DS:DX указывает на строку с полным именем запускаемого оверлея
 FIND_OVERLAY_PATH PROC
 	; Выводим промежуточное сообщение:
 		printl STR_FIND_OVERLAY_PATH
 
 	push es ; Сохраняем PSP
+	push ax
+	push si
+	push di
+	push cx
 	
 	; Переходим в область среды
 	mov ax, es:[2ch]
@@ -189,6 +233,10 @@ repne scasb
 	; Установили ds:si на копируемую строку, es:di - на то, куда копируем
 rep movsb ; Выполняем копирование
 	
+	pop cx
+	pop di
+	pop si
+	pop ax
 	pop es ; Восстанавливаем PSP
 	
 	lea dx,OVERLAY_PATH ; Кладём указатель на полное имя программы в dx
@@ -197,30 +245,40 @@ rep movsb ; Выполняем копирование
 	ret
 FIND_OVERLAY_PATH ENDP
 ;---------------------------------------
-; TODO: в какой переменной хранить название запускаемого оверлея?
 ; Процедура запуска оверлея
 ; Принимает в bp указатель на имя запускаемого оверлея из того же каталога, что и сама программа
 RUN_OVERLAY PROC
-	push es
 	push ds
+	push es
+	push ax
+	push bx
+	push cx
+	push dx
+	
+	
 	; Ищем файл с оверлеем, устанавливаем DS:DX на строку, содержащую имя файла с оверлеем
 	call FIND_OVERLAY_PATH
-	; Выделяем память для оверлея
+	; Выделяем память для оверлея и получаем сегментный адрес выделенной памяти в ax
 	call ALLOC_MEM
-	; Генерируем блок параметров
-	mov PARAMBLOCK,ax 
-	pop es ; В ES кладём DS
-	lea bx, PARAMBLOCK ; ES:BX указывает на блок параметров
-	; Выводим промежуточное сообщение:
-	printl STR_RUN_OVERLAY
 
 	mov CS:KEEP_SP, SP
 	mov CS:KEEP_SS, SS
 	mov CS:KEEP_DS, DS
 	mov CS:KEEP_ES, ES
+
+	; Генерируем блок параметров
+	mov PARAMBLOCK,ax 
+	push ds
+	pop es ; В ES кладём DS
+	lea bx, PARAMBLOCK ; ES:BX указывает на блок параметров
+	; Выводим промежуточное сообщение:
+	printl STR_RUN_OVERLAY
 	; Запускаем оверлей
 		mov ax,4b03h
 		int 21h
+		jnc OVL_LOADED
+			call PROCESS_LOADER_ERRORS
+		OVL_LOADED:
 	; Переходим в оверлей
 		printl STRENDL
 		call dword ptr OVERLAY_ADDR
@@ -232,23 +290,13 @@ RUN_OVERLAY PROC
 	jnc OVERLAY_SUCCESS
 
 	; Обработка ошибок
-	push ax
-	push es
-	mov ax,PARAMBLOCK
-	mov es,ax
-	mov ax,4900h
-	int 21h
-	pop es
-	pop ax
 		call PROCESS_LOADER_ERRORS
 
 	; Ошибок нет
 	OVERLAY_SUCCESS:
 	printl STR_PROC_DONE
-
 	; Освобождаем память
 	printl STR_RMV_OVERLAY
-	push ax
 	push es
 	mov ax,PARAMBLOCK
 	mov es,ax
@@ -259,8 +307,12 @@ RUN_OVERLAY PROC
 	call PROCESS_LOADER_ERRORS
 	OVERLAY_DELETE_SUCCESS:
 	printl STR_PROC_DONE
+	pop dx
+	pop cx
+	pop bx
 	pop ax
 	pop es
+	pop ds
 	ret
 	; Переменные для хранения регистров
 	KEEP_SP dw 0
@@ -319,7 +371,7 @@ BEGIN:
 	mov ds,ax
 	; Освобождаем лишнюю память
 	call FREE_MEM
-	
+
 	push dx
 	lea dx,STRENDL
 	print
@@ -358,7 +410,7 @@ DATA SEGMENT
 		STR_ERR_TOO_MANY_FILES		db 'Too many open files$'
 		STR_ERR_NO_ACCESS			db 'Access denied$'
 		STR_ERR_INVLD_HNDL			db 'Invalid handle$'
-		STR_ERR_MCB_DESTROYED		db 'Memory control blocks destroyed'
+		STR_ERR_MCB_DESTROYED		db 'Memory control blocks destroyed$'
 		STR_ERR_NOT_ENOUGH_MEM		db 'Insufficient memory$'
 		STR_ERR_WRNG_MEM_BL_ADDR 	db 'Invalid memory block address$'
 		STR_ERR_WRONG_ENV			db 'Invalid environment$'
@@ -377,7 +429,8 @@ DATA SEGMENT
 		STR_RMV_OVERLAY			db 'Removing overlay:$'
 
 	STRENDL 				db 0DH,0AH,'$'
-
+	STRTEST					db '    $'
+	
 	OVERLAY_ADDR dd 0 ; Первое слово - IP(=0), второе - сегмент(устанавливается в программе)
 	; Блок параметров. Перед загрузкой дочерней программы на него должен указывать ES:BX
 	PARAMBLOCK	dw 0 ; Сегментный адрес, по которому загружается оверлей
