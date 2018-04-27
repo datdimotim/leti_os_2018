@@ -293,8 +293,10 @@ MAIN proc far
 	mov  BX, DS					;
 	neg  BX						;
 	add  BX, CODE				;
+	shl  BX, 4					;
 	add  BX, offset last_byte	;
-	shr  BX, 4					; BX = (-"Адрес PSP"+"Адрес кода"+"байт в коде") / 4
+	shr  BX, 4					;
+	inc  BX						;
 	
 	mov  AH, 4Ah				;
 	int  21h					; освобождаем память
