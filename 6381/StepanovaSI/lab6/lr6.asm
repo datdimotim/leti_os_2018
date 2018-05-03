@@ -20,7 +20,7 @@ ParameterBlock dw ? ;сегментный адрес среды
 	End_1    DB 0DH, 0AH,'End by Ctrl-Break!',0DH,0AH,'$'
 	End_2    DB 0DH, 0AH,'The completion of the device error!',0DH,0AH,'$'
 	End_3    DB 0DH, 0AH,'Completion by function 31h!',0DH,0AH,'$'
-	PATH 	 DB 'C:\LR2.COM',0
+	PATH 	 DB 'LR2.COM',0
 	KEEP_SS  DW 0
 	KEEP_SP  DW 0
 	END_CODE DB 'End code:   ',0DH,0AH,'$'
