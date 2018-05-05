@@ -4,7 +4,7 @@ PROG SEGMENT
 START:
 		jmp main
 ;Данные
-		avail_mem db 13,10,"Size of available memory: $"
+		avail_mem db "Size of available memory: $"
 		exten_mem db 13,10,"Size of extended memory: $"
 		str_MCB db "MCB #0   Addr:       Owner: $"
 		str_size db 13, 10, "Size: $"
@@ -19,7 +19,7 @@ START:
 		str_owner db "    $"
 		str_Byte db " byte$"
 		str_enter db 13,10,"$"
-		fr_mem db "Freeing memory: $"
+		fr_mem db 13,10,"Freeing memory: $"
 		al_mem db "Allocating memory: $"
 		er7 db "Failed. Memory management blocks destroyed",13,10,"$"
 		er8 db "Failed. Not enough memory",13,10,"$"
@@ -314,10 +314,10 @@ TEST_ERROR PROC NEAR
 TEST_ERROR ENDP
 ;------------------------CODE----------------------
 	main:
-		call FREE_MEM
-		call MEMORY_ALLOCATION
 		call AMOUNT_OF_AVAILABLE_MEMORY
 		call EXTENDED_MEMORY_SIZE
+		call FREE_MEM
+		call MEMORY_ALLOCATION
 		call CHAIN_OF_MEMORY_CONTROL_BLOCKS
 	
 		xor AL,AL
