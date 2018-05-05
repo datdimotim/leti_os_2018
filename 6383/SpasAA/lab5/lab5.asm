@@ -17,7 +17,7 @@ ROUTINE PROC FAR
 	KEEP_SS		DW ?
 	KEEP_AX		DW ?
 	KEEP_SP		DW ?
-
+;
 BEGIN:
 	mov 	KEEP_SS, SS
  	mov 	KEEP_SP, SP
