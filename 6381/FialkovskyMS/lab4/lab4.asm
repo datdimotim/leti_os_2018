@@ -1,3 +1,7 @@
+INT_STACK SEGMENT STACK
+	DW 32 DUP (?)
+INT_STACK ENDS
+
 STACK SEGMENT STACK
 	DW 256 DUP (?)
 STACK ENDS
@@ -63,8 +67,19 @@ ROUT proc far
 	KEEP_PSP DW 0 ; PSP
 	IS_LOADED DB 0 ; флаг загрузки
 	str_counter DB 'Number of handler calls (00000)$' ;счётчик
+	KEEP_SS DW 0
+	KEEP_AX DW 0	
+	KEEP_SP DW 0
 
 ROUT_begin:
+	mov KEEP_AX, ax
+	mov KEEP_SS, ss
+	mov KEEP_SP, sp
+	mov ax, seg INT_STACK ;устанавливаем собственный стек
+	mov ss, ax
+	mov sp, 32h
+	mov ax, KEEP_ax
+	
 	push ax
 	push dx
 	push ds
@@ -150,7 +165,10 @@ ROUT_end:
 	pop es
 	pop ds
 	pop dx
-	pop ax 
+	pop ax
+	mov ss, KEEP_SS
+	mov sp, KEEP_SP
+	mov ax, KEEP_AX	
 	iret
 ROUT endp
 
