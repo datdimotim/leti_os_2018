@@ -1,3 +1,8 @@
+INT_STACK SEGMENT STACK
+	DW 64 DUP (?)
+INT_STACK ENDS
+
+
 STACK SEGMENT STACK
 	DW 64 DUP (?)
 STACK ENDS
@@ -56,10 +61,19 @@ ROUT_DATA:
 	KEEP_IP DW 0 ;и смещения прерывания
 	KEEP_PSP DW 0 ;и PSP
 	DELETE DB 0 ;переменная, по которой определяется, надо выгружать прерывание или нет
+	KEEP_SS DW 0
+	KEEP_AX DW 0	
+	KEEP_SP DW 0
 	COUNTER DB 'Total number of interrupts: 0000 $' ;счётчик
 ROUT_CODE:
-	push AX ;сохранение изменяемых регистров
-	push DX
+	mov KEEP_AX, AX ;сохраняем ax
+	mov KEEP_SS, SS ;сохраняем стек
+	mov KEEP_SP, SP
+	mov AX, seg INT_STACK ;устанавливаем собственный стек
+	mov SS, AX
+	mov SP, 64h
+	mov AX, KEEP_AX
+	push DX ;сохранение изменяемых регистров
 	push DS
 	push ES
 	;обработка прерывания
@@ -162,7 +176,9 @@ ROUT_END:
 	pop ES ;восстановление регистров
 	pop DS
 	pop DX
-	pop AX 
+	mov SS, KEEP_SS
+	mov SP, KEEP_SP
+	mov AX, KEEP_AX
 	iret
 ROUT ENDP
 ;---------------------------------------------------------------
