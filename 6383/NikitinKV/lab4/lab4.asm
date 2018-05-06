@@ -2,12 +2,33 @@ CODE SEGMENT
  ASSUME CS:CODE, DS:DATA, ES:DATA, SS:ASTACK
 
 ROUT PROC FAR
+	jmp go_
+	SIGNATURA dw 0ABCDh
+	KEEP_PSP dw 0
+	KEEP_IP dw 0
+	KEEP_CS dw 0
+	INT_STACK		DW 	100 dup (?)
+	COUNT	dw 0
+	KEEP_SS DW 0
+	KEEP_AX	DW 	?
+    KEEP_SP DW 0
+	MSG db 'Количество вызовов прерывания:     $'
+	go_:
+	mov KEEP_SS, SS 
+	mov KEEP_SP, SP 
+	mov KEEP_AX, AX 
+	mov AX,seg INT_STACK 
+	mov SS,AX 
+	mov SP,0 
+	mov AX,KEEP_AX
+	
 	push ax
 	push bp
 	push es
 	push ds
 	push dx
 	push di
+	
 	mov ax,cs
 	mov ds,ax 
 	mov es,ax 
@@ -18,6 +39,7 @@ ROUT PROC FAR
 	call WRD_TO_HEX
 	mov bp,offset MSG
 	call outputBP
+	
 	pop di
 	pop dx
 	pop ds
@@ -26,13 +48,11 @@ ROUT PROC FAR
 	mov al,20h
 	out 20h,al
 	pop ax
+	mov 	AX,KEEP_SS
+ 	mov 	SS,AX
+ 	mov 	AX,KEEP_AX
+ 	mov 	SP,KEEP_SP
 	iret
-	SIGNATURA dw 0ABCDh
-	KEEP_PSP dw 0
-	KEEP_IP dw 0
-	KEEP_CS dw 0 
-	COUNT	dw 0
-	MSG db 'Количество вызовов прерывания:     $'
 ROUT ENDP 
 
 TETR_TO_HEX PROC near
@@ -121,7 +141,7 @@ PROV_ROUT ENDP
 
 SET_ROUT PROC
 	mov ax,KEEP_PSP 
-	mov es,ax ; кладём в es PSP нашей програмы
+	mov es,ax
 	cmp byte ptr es:[80h],0
 		je UST
 	cmp byte ptr es:[82h],'/'
@@ -137,10 +157,8 @@ SET_ROUT PROC
 	
 	UST:
 	call SAVE_STAND	
-	
 	mov dx,offset PRER_SET_MSG
 	call PRINT
-	
 	push ds
 	mov dx,offset ROUT
 	mov ax,seg ROUT
@@ -149,7 +167,7 @@ SET_ROUT PROC
 	mov al,1ch
 	int 21h
 	pop ds
-	
+
 	mov dx,offset LAST_BYTE
 	mov cl,4
 	shr dx,cl
@@ -159,7 +177,6 @@ SET_ROUT PROC
 	xor AL,AL
 	mov ah,31h
 	int 21h
-		
 	xor AL,AL
 	mov AH,4Ch
 	int 21H
@@ -169,9 +186,7 @@ DEL_ROUT PROC
 	push dx
 	push ax
 	push ds
-	push es
-	
-	
+	push es	
 	mov ax,KEEP_PSP 
 	mov es,ax
 	cmp byte ptr es:[80h],0
@@ -191,14 +206,12 @@ DEL_ROUT PROC
 	int 21h
 	mov si,offset KEEP_IP
 	sub si,offset ROUT
-	
 	mov dx,es:[bx+si]
 	mov ax,es:[bx+si+2]
 	mov ds,ax
 	mov ah,25h
 	mov al,1ch
 	int 21h
-	
 	mov ax,es:[bx+si-2]
 	mov es,ax
 	mov ax,es:[2ch]
@@ -238,7 +251,7 @@ SAVE_STAND PROC
 	pop ax
 	ret
 SAVE_STAND ENDP
-;---------------------------------------
+
 BEGIN:
 	mov ax,DATA
 	mov ds,ax
@@ -256,7 +269,7 @@ DATA SEGMENT
 	PRER_NE_SET_MSG db 'Обработчик прерывания не установлен',0DH,0AH,'$'
 	STRENDL db 0DH,0AH,'$'
 DATA ENDS
-; СТЕК
+
 ASTACK SEGMENT STACK
 	dw 100h dup (?)
 ASTACK ENDS
