@@ -55,7 +55,20 @@ _DATA:
 	KEEP_PSP DW 0
 	VALUE DB 0
 	COUNTER DB '    Number of calls: 00000    $' ; counter
+	STACK_	DW 	64 dup (?)
+	KEEP_SS DW 0
+	KEEP_AX	DW 	?
+    KEEP_SP DW 0
+	
 	ROUT_:
+	mov KEEP_SS, SS
+	mov KEEP_AX, AX
+	mov KEEP_SP, SP
+	mov AX, seg STACK_
+	mov SS, AX
+	mov SP, 0
+	mov AX, KEEP_AX
+	
 	push AX
 	push DX
 	push DS
@@ -110,7 +123,7 @@ ROUT_NEXT:
 	pop dx
 	call setCurs
 	jmp ROUT_END
-
+	
 ROUT_RES: ; restoring the interrupt vector
 	CLI
 	mov DX,KEEP_IP
@@ -127,11 +140,17 @@ ROUT_RES: ; restoring the interrupt vector
 	mov AH, 49h
 	int 21h
 	STI
+	
 ROUT_END: ; restoring registers
 	pop ES
 	pop DS
 	pop DX
 	pop AX 
+	
+	mov AX, KEEP_SS
+	mov SS, AX
+	mov SP,KEEP_SP
+	mov AX,KEEP_AX
 	iret
 ROUT ENDP
 ;---------------------------------------------------------------
