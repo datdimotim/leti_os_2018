@@ -40,6 +40,12 @@ begin:
  	mov sp, 0
  	mov ax, KEEP_AX  
 	
+	mov ax,0040h
+	mov es,ax
+	mov al,es:[17h]
+	and al,00000010b
+	jnz stand_set
+	
 	in al,60h ;Cчитать ключ
 	
 	cmp al, REQ_KEY_6
@@ -60,7 +66,14 @@ begin:
 	mov ss, KEEP_SS 
  	mov sp, KEEP_SP
 	
-	jmp dword ptr cs:[KEEP_IP] ;переходим на стандартный обработчик
+	stand_set:
+		pop es
+		pop ds
+		pop dx
+		mov ax, CS:KEEP_AX
+		mov sp, CS:KEEP_SP
+		mov ss, CS:KEEP_SS
+		jmp dword ptr cs:[KEEP_IP]
 
 	key6:
 		mov cl, 'A'
