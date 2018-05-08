@@ -36,6 +36,11 @@ function:
 	push ax
 	;Считывание номера клавиши
 	sub ax, ax
+	mov ax,40h
+	mov es,ax
+	mov al,es:[17h]
+	cmp al,00000010b
+	je not_processing
 	in al, 60h
 	;Проверка на требуемые скан-коды
 
