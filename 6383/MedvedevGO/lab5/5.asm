@@ -31,7 +31,8 @@ _DATA:
 	KEEP_SS DW 0
 	KEEP_AX DW 0	
 	KEEP_SP DW 0 
-	
+	_TILD DB 29h
+
 ROUT_:
 	mov KEEP_SS, ss
 	mov KEEP_AX, ax
@@ -41,19 +42,29 @@ ROUT_:
 	mov sp, 0
 	mov ax, KEEP_AX
 
-	push ax
-	push dx
-	push ds
-	push es
-	
+	mov ax, 0040h
+	mov es, ax
+	mov al, es:[17h]
+	cmp al, 00000010b
+	jnz NEXT
 	in al, 60H 
-	cmp al, 29h 
-	je DO_REQ 
 	
-	pushf
-	call dword ptr CS:KEEP_IP
-	jmp ROUT_END
+	cmp al, _TILD 
+	je TILD 
 	
+NEXT:
+	pop ES
+	pop DS
+	pop DX
+	mov ax, CS:KEEP_AX
+	mov sp, CS:KEEP_SP
+	mov ss, CS:KEEP_SS
+	jmp dword ptr cs:[KEEP_IP]
+	
+TILD:
+	mov cl, '_'
+	jmp DO_REQ
+
 DO_REQ:
 	push ax
 	in al, 61h 
@@ -68,7 +79,6 @@ DO_REQ:
 	
 ADDSYMB: 
 	mov ah, 05h 
-	mov cl, '_'
 	mov ch, 00h	
 	int 16h
 	or al, al 
@@ -115,7 +125,7 @@ UNLOAD:
 	xor al,al
 	mov ah,31h
 	int 21h 
-	
+
 LOAD: 
 	push es
 	push ax
