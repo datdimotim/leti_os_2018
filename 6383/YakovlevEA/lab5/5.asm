@@ -1,4 +1,4 @@
-ASSUME CS:CODE, DS:DATA, SS:SSTACK
+﻿ASSUME CS:CODE, DS:DATA, SS:SSTACK
 ;-------------------------------------------------------------
 
 ;-------------------------------------------------------------
@@ -64,10 +64,36 @@ end_compare:
 	pop cx
 	pop bx
 	pop ds
+	;
+push ax
+push es ;Сохраним используемый регистр
+
+mov ax,40h ;Настроим ES на начало
+
+mov es,ax ;области данных BIOS
+
+mov al,es:[17h] ;Получим слово флагов клавиатуры
+
+pop es ;Восстановим ES - он больше не нужен
+
+;cmp al,00h;Уже нажата <LShift>
+;je Shift
+
+cmp al,01h ;Уже нажата <RShift>
+je Shift
+
+pop ax
 	
+
+	;
 	cmp ah, 01h
 	je processing
 	jmp not_processing
+
+	Shift:
+	pop ax
+	jmp not_processing
+
 
 not_processing:
 	;Возврат к стандартному обработчику прерывания
