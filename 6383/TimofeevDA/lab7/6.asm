@@ -24,7 +24,6 @@ DATA SEGMENT
     ;------------  PARAM_BLOCK  ------------------;
     PARAMS dw 0 , 0 ; сегментный адрес загрузки оверлея
     ;---------  END OF PARAM_BLOCK  --------------;
-    CMD_PROMT db 0, ''
     PATH_PROMT db 81h dup(0)
     
     DTA_BUFFER db 43 dup(?)
@@ -177,7 +176,7 @@ init_child_path1 proc near
     mov byte ptr es:[di-2], 'V'
     mov byte ptr es:[di-3], 'O'
     mov byte ptr es:[di-4], '.'
-    mov byte ptr es:[di-5], '6'
+    mov byte ptr es:[di-5], '1'
     
     pop ds
     pop es
@@ -221,7 +220,7 @@ init_child_path2 proc near
     mov byte ptr es:[di-2], 'V'
     mov byte ptr es:[di-3], 'O'
     mov byte ptr es:[di-4], '.'
-    mov byte ptr es:[di-5], '7'
+    mov byte ptr es:[di-5], '2'
     
     pop ds
     pop es
@@ -254,8 +253,11 @@ GET_SIZE_OF_FILE PROC NEAR
     print_label_SZ:
     call PRINT
     
-    mov ah, 4ch
-    int 21h
+    mov ax, 0
+    pop ds
+    pop cx
+    pop dx
+    ret
     sizeOfFile_success:
     
     mov ax, [offset DTA_BUFFER+1Ah]
@@ -360,17 +362,23 @@ START:
     
     call init_child_path1
     call GET_SIZE_OF_FILE
-    call ALLOC_MEM
-    call LOAD_OVL
-    call RUN_OVL
-    call DEALLOC_MEM
+    cmp ax, 0
+    je next_ovl
+        call ALLOC_MEM
+        call LOAD_OVL
+        call RUN_OVL
+        call DEALLOC_MEM
+    next_ovl:
     
     call init_child_path2
     call GET_SIZE_OF_FILE
-    call ALLOC_MEM
-    call LOAD_OVL
-    call RUN_OVL
-    call DEALLOC_MEM
+    cmp ax, 0
+    je exit_of_prog
+        call ALLOC_MEM
+        call LOAD_OVL
+        call RUN_OVL
+        call DEALLOC_MEM
+    exit_of_prog:
     
     mov ah, 4ch
     mov al, 0

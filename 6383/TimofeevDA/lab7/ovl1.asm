@@ -9,7 +9,12 @@ CODE segment
 	CALL WRD_TO_HEX
 	mov dx, offset ADDR_STRING 
 	mov ah,09h
-	int 21h
+    int 21h
+    
+    ;mov ah, 02h
+    ;mov dl, 'L'
+    ;int 21h
+   
 	pop ds
 	retf
 	
