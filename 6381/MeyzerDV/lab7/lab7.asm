@@ -136,8 +136,7 @@ ALLOC_MEM PROC
 			printl STR_ERR_FL_NOT_FND
 			pop dx
 			pop ds
-			mov ax,4c00h
-			int 21h
+			jmp ALLOC_MEM_ERR_EXIT
 		ALLOC_MEM_FILE_FOUND:
 		push es
 		push bx
@@ -168,6 +167,10 @@ ALLOC_MEM PROC
 	printl STR_PROC_DONE
 	mov word ptr OVERLAY_ADDR+2,ax
 	mov PARAMBLOCK,ax
+	ret
+	
+	ALLOC_MEM_ERR_EXIT:
+	
 	ret
 ALLOC_MEM ENDP
 ;---------------------------------------
@@ -258,9 +261,12 @@ RUN_OVERLAY PROC
 	
 	; Ищем файл с оверлеем, устанавливаем DS:DX на строку, содержащую имя файла с оверлеем
 	call FIND_OVERLAY_PATH
+	
 	; Выделяем память для оверлея и получаем сегментный адрес выделенной памяти в ax
 	call ALLOC_MEM
-
+	jnc OVERLAY_FOUND
+		jmp OVERLAY_ERR
+	OVERLAY_FOUND:
 	mov CS:KEEP_SP, SP
 	mov CS:KEEP_SS, SS
 	mov CS:KEEP_DS, DS
@@ -307,6 +313,7 @@ RUN_OVERLAY PROC
 	call PROCESS_LOADER_ERRORS
 	OVERLAY_DELETE_SUCCESS:
 	printl STR_PROC_DONE
+	OVERLAY_ERR:
 	pop dx
 	pop cx
 	pop bx
