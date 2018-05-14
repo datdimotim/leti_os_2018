@@ -41,7 +41,7 @@ DATA SEGMENT
 	;-Командная строка-;
 	;
 	CMD_Num_Char	db	0h
-	CMD_STR			db  81h dup(0)
+	CMD_STR			db  80h dup(0)
 	
 DATA ENDS
 
@@ -199,8 +199,9 @@ MAIN proc far
 	add  BX, offset last_byte	;
 	shr  BX, 4					;
 	inc  BX
-	add  BX, 2Ah				; столько параграфов занимает PSP.COM вместе со своим PSP
-
+	
+	;add  BX, 0Fh				; при задействовании данной строчки выводит "одекватный" хвост командной строки "свежеслепленного" .exe
+								; (т.е. выводит пустой хвост)
 	
 	mov  AH, 4Ah				;
 	int  21h					; освобождаем память
@@ -242,6 +243,10 @@ good_4Ah:
 	mov  SI, offset PSP_COM			; Заменяем имя исполняемого файла
 			
 	rep movsb	
+	
+	mov  AX, DI						;
+	sub  AX, offset CMD_STR-1		;
+	mov  CMD_Num_Char, AL			; размер командной строки
 
 ;;;;++++Сохраняемся перед запуском++++;;;;
 	mov  KEEP_SP, SP
