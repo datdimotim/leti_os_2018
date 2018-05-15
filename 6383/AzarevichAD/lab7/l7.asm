@@ -213,8 +213,10 @@ pop SI
 	
 	jnc  good_4Eh						; 
 		call ERROR_4Eh					;
-		mov  AH, 4Ch					; На случай отсутствия
-		int  21h						; файла или маршрута
+		pop ES							;
+		pop DS							;
+		popa							; На случай отсутствия
+		ret								; файла или маршрута
 good_4Eh:
 	
 	push DS								;
@@ -244,7 +246,7 @@ good_4Eh:
 	mov  word ptr DS:[ParBlock], 100h
 	
 	mov  DX, offset CMD_STR				;
-	mov  BX, offset ParBlock+2			; Загражаем 
+	mov  BX, offset ParBlock+2			; Загружаем 
 	mov  AX, 4B03h						; оверлей
 	int  21h							; в память
 	
