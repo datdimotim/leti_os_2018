@@ -175,7 +175,7 @@ SET_ROUT PROC
 	
 	; меняем адрес обработчика прерывания 1Ch:
 	mov ah,25h
-	mov al,1ch
+	mov al,09h
 	int 21h
 	pop ds
 	
@@ -184,15 +184,13 @@ SET_ROUT PROC
 	mov cl,4
 	shr dx,cl ; делим dx на 16
 	add dx,1
-	add dx,20h
+	add dx,40h
 		
 	xor AL,AL
 	mov ah,31h
 	int 21h ; оставляем наш обработчик в памяти
 		
-	xor AL,AL
-	mov AH,4Ch
-	int 21H
+	ret
 SET_ROUT ENDP
 ;---------------------------------------
 ; удаление нашего обработчика:
@@ -217,8 +215,10 @@ DEL_ROUT PROC
 	mov dx,offset DELL
 	call PRINT
 	
+	CLI
+	
 	mov ah,35h
-	mov al,1ch
+	mov al,09h
 	int 21h 
 	mov si,offset KEEP_IP
 	sub si,offset ROUT
@@ -243,6 +243,7 @@ DEL_ROUT PROC
 	mov ah,49h
 	int 21h
 
+	STI
 	jmp DELL_END2
 	
 	DELL_END:
@@ -263,7 +264,7 @@ SAVE_HAND PROC
 	push bx
 	push es
 	mov ah,35h
-	mov al,1ch
+	mov al,09h
 	int 21h 
 	mov KEEP_CS, ES
 	mov KEEP_IP, BX
