@@ -243,7 +243,7 @@ good_4Eh:
 
 ;;;;++++Подготовка к запуску оверлея++++;;;;
 	mov  word ptr DS:[ParBlock+2], AX	; Сохраняем выделенный сегмент
-	mov  word ptr DS:[ParBlock], 100h
+	mov  word ptr DS:[ParBlock]  , 0
 	
 	mov  DX, offset CMD_STR				;
 	mov  BX, offset ParBlock+2			; Загружаем 
@@ -257,15 +257,11 @@ good_4Eh:
 	SUCCESS_LOAD:						;
 	
 ;;;;++++Пуск и назад++++;;;;
-	mov  AX, word ptr DS:[ParBlock+2]
-	sub  AX, 10h
-	mov  word ptr DS:[ParBlock+2], AX
 		
 	call  dword ptr DS:ParBlock			; Вызов оверлея
 	
 ;;~~~Освобождение памяти~~~;;
 	mov  AX, DS:[ParBlock+2]			;
-	add  AX, 10h						;
 	mov  ES, AX							;
 	mov  AH, 49h						;
 	int  21h							; Освобождаем память

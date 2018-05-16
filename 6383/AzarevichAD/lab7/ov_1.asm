@@ -1,7 +1,7 @@
 ﻿.286
 CODE	SEGMENT
 	ASSUME CS:CODE, DS:CODE, SS:NOTHING
-	ORG 100h
+
 BEGIN:
 	pusha
 	push DS
