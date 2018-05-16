@@ -2,6 +2,26 @@ CODE SEGMENT
  ASSUME CS:CODE, DS:DATA, ES:DATA, SS:STACK
 
 ROUT PROC FAR
+	jmp mark
+	SGNTR dw 0ABCDh
+	KEEP_PSP dw 0 
+	KEEP_IP dw 0 ;
+	KEEP_CS dw 0 
+	COUNT	dw 0 
+	NUM_CALL db 'Количество вызовов прерывания:     $'
+	KEEP_AX dw 0
+	KEEP_SS dw 0
+	KEEP_SP dw 0
+	INT_STACK dw 100 dup (?)
+	mark:
+	mov KEEP_SS, SS 
+	mov KEEP_SP, SP 
+	mov KEEP_AX, AX 
+	mov AX,seg INT_STACK 
+	mov SS,AX 
+	mov SP,0 
+	mov AX,KEEP_AX
+	
 	
 	push ax
 	push bp
@@ -29,13 +49,11 @@ ROUT PROC FAR
 	mov al,20h
 	out 20h,al
 	pop ax
+	mov 	AX,KEEP_SS
+	mov 	SS,AX
+	mov 	AX,KEEP_AX
+ 	mov 	SP,KEEP_SP
 	iret
-	SGNTR dw 0ABCDh
-	KEEP_PSP dw 0 
-	KEEP_IP dw 0 ;
-	KEEP_CS dw 0 
-	COUNT	dw 0 
-	NUM_CALL db 'Количество вызовов прерывания:     $'
 ROUT ENDP 
 ; --------------------------------------
 TETR_TO_HEX PROC near
