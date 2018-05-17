@@ -17,27 +17,38 @@ SSTACK ENDS
 ;----------------------------------------------------------------------
 ROUT PROC FAR
 	jmp start
-	
 	PSP_AD1 dw 0  
 	PSP_AD2 dw 0
 	KEEP_CS dw 0                           
 	KEEP_IP dw 0                           
 	INTER_ADR dw 1234h       
 	COUNTER db 'My current call count: 0000  $' 
-
+	
+	;;;;;;;;;;;;;;;;;;;
 start:
+	
+	;;;;;;;;;;;;;;;;;;;;;
+	mov  CS:KEEP_AX, AX
+mov  CS:KEEP_SS, SS
+mov  CS:KEEP_SP, SP
+
+mov  AX, SEG NEW_STACK
+mov  SS, AX
+mov  SP, offset QWE
+	;;;;;;pusha
 	push ax      
 	push bx
 	push cx
 	push dx
+	push ES	
 
-	;Чтение позиции курсора
+	;?oaiea iiceoee eo?ni?a
 	mov ah, 03h
 	mov bh, 00h
 	int 10h
 	push dx 
 
-	;Установка курсора
+	;Onoaiiaea eo?ni?a
 	mov ah, 02h
 	mov bh, 00h
 	mov dx, 0210h
@@ -84,7 +95,7 @@ start:
 	mov [si - 3],dh
 	
 end_count:
-	;Выводим строку на экран
+	;Auaiaei no?ieo ia ye?ai
     	pop ds
     	pop cx
 	pop si	
@@ -113,9 +124,35 @@ end_count:
 	pop dx
 	pop cx
 	pop bx
-	pop ax     
+	pop ax  
+   	
+	pop  ES
+	;popa
+	mov  AX, CS:KEEP_SS
+mov  SS, AX
+mov  SP, CS:KEEP_SP
+
+	mov al, 20h
+	out 20h, al
+	
+mov  AX, CS:KEEP_AX
+	
+	;;;
+	
 	iret
+	
+	
+	;;;;;;
+	
+;;;;;;;;;;;;;;
+	KEEP_SP		dw 0h
+	KEEP_SS		dw 0h
+	KEEP_AX		dw 0h
+	
+	NEW_STACK	db 20h DUP(0)
+	
 ROUT ENDP
+QWE:
 ;---------------------------------------------------------------------------
 unfree_mem:
 ;---------------------------------------------------------------------------
@@ -124,12 +161,12 @@ IS_LOADED PROC NEAR
 	push dx
 	push es
 
-	mov ah, 35h	;получение вектора
-	mov al, 1Ch	; прерываний
+	mov ah, 35h	;iieo?aiea aaeoi?a
+	mov al, 1Ch	; i?a?uaaiee
 	int 21h
 
 	mov dx, es:[bx + 11]
-	cmp dx, 1234h ; проверка на совпадение кода прерывания
+	cmp dx, 1234h ; i?iaa?ea ia niaiaaaiea eiaa i?a?uaaiey
 	je to_set
 	mov al, 00h
 	jmp end_set
