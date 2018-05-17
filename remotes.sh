@@ -33,3 +33,4 @@ git remote add DainovichA https://github.com/aDainovich/leti_os_2018.git
 git remote add TokunMS https://github.com/Creedy0/leti_os_2018.git
 git remote add PopovNV https://github.com/Nikitapopov/leti_os_2018.git
 git remote add LubchukDV https://github.com/DenisLubchyk/leti_os_2018.git
+git remote add LipendinAA https://github.com/FRESHZOIDf/leti_os_2018.git
