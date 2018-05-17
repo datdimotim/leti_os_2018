@@ -8,9 +8,9 @@ STACK SEGMENT STACK
 STACK ENDS
 ;---------------------------------------------------------------
 DATA SEGMENT
-	AlreadyLoaded DB 'User interruption is already loaded!',0DH,0AH,'$'
-	Unloaded DB 'User interruption is Unloaded!',0DH,0AH,'$'
-	Loaded DB 'User interruption is loaded!',0DH,0AH,'$'
+	AlreadyLoaded 	DB 'User interruption is already loaded!',0DH,0AH,'$'
+	Unloaded 		DB 'User interruption is unloaded!',0DH,0AH,'$'
+	Loaded 			DB 'User interruption is loaded!',0DH,0AH,'$'
 DATA ENDS
 ;---------------------------------------------------------------
 CODE SEGMENT
@@ -58,17 +58,20 @@ GetCursor ENDP
 ;---------------------------------------------------------------
 ; Функция вывода символа из AL
 OutputAL PROC
-		push 	AX
-		push 	BX
-		push 	CX
-		mov 	AH,09h   ;писать символ в текущей позиции курсора
-		mov 	BH,0     ;номер видео страницы
-		mov 	BL,07h
-		mov 	CX,1     ;число экземпляров символа для записи
-		int 	10h      ;выполнить функцию
-		pop 	CX
-		pop 	BX
-		pop 	AX
+		push 	ES 
+		push 	BP
+		mov 	AX,SEG COUNTER
+		mov 	ES,AX
+		mov 	AX,offset COUNTER
+		mov 	BP,AX ;ES:BP = адрес 
+		mov 	AH,13h ;функция 13h прерывания 10h
+		mov 	AL,00h ;режим вывода
+		mov 	BL, 07h
+		mov 	CX,2h ;длина строки
+		mov 	BH,0 ;видео страница
+		int 	10h
+		pop 	BP
+		pop 	ES
 		ret
 OutputAL ENDP
 ;---------------------------------------------------------------
@@ -83,7 +86,7 @@ RoutData:
 		KeepSS 		DW 0
 		KeepAX 		DW 0	
 		KeepSP 		DW 0
-		Counter 	DB '0 $' ;счётчик
+		Counter 	DB '00 $' ;счётчик
 RoutCode:
 		mov 	KeepAX, AX ;сохраняем ax
 		mov 	KeepSS, SS ;сохраняем стек
@@ -111,16 +114,23 @@ RoutCalc:
 		mov 	AX,SEG Counter
 		mov 	DS,AX
 		mov 	SI,offset Counter
+		add 	SI,1h
+		;(0*)
 		mov 	AH,[SI]
 		inc 	AH
 		mov 	[SI],AH ;возвращаем
-		cmp 	AH,33h ;если не больше 2
+		cmp 	AH,3Ah ;если не больше 9
 		jne 	EndCalc
 		mov 	AH,30h ;обнуляем
 		mov 	[SI],AH
-		jne 	EndCalc
-		mov 	DH,30h
-		mov 	[SI-3],DH
+		;(*0)
+		mov 	BH,[SI-1] ;получаем цифру
+		inc 	BH ;увеличиваем её на 1
+		mov 	[SI-1],BH ;возвращаем
+		cmp 	BH,3Ah ;если не больше 9                   
+		jne 	EndCalc ;заканчиваем
+		mov 	BH,30h ;обнуляем
+		mov 	[SI-1],BH ;возвращаем
 RoutRec1:
 		cmp 	DeleteFlag, 1
 		je 		RoutRec
@@ -128,10 +138,8 @@ EndCalc:
 		pop 	DS
 		pop 	CX
 		pop 	SI
-		mov 	AL,Counter
-		or 		AL,30h
 		call 	OutputAL
-		int 	10h
+		
 		
 		pop 	DX
 		call 	SetCursor
