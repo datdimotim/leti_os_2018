@@ -9,6 +9,9 @@ isUd db ?
 isloaded db ?
 sg dw ?
 num db 0
+
+signat db "12345"
+
 KEEP_CS DW ? ; для хранения сегмента
 KEEP_IP DW ? ; и смещения вектора прерывания
 .STACK 400h
@@ -16,6 +19,18 @@ KEEP_IP DW ? ; и смещения вектора прерывания
 resID dw 0ff00h
 ;-----------------------------------
 ROUT PROC FAR
+	mov cs:[KEEP_AX],ax
+	mov cs:[KEEP_SS],ss
+	mov cs:[KEEP_SP],sp
+
+	cli
+	
+	mov ax,cs:[M_S]
+	mov ss,ax
+	mov sp,cs:[M_P]
+	
+	sti
+	
 	mov cs:[typeKey], 0
 	in al, 60h
 	cmp al, 10h  ;\\ 
@@ -39,6 +54,16 @@ ROUT PROC FAR
 		pop ax
 		jnz do_req
 	oldint9:
+		cli
+		
+		mov ax,cs:[KEEP_SS]
+		mov ss,ax
+		mov sp,cs:[KEEP_SP]
+		
+		sti
+		
+		mov ax,cs:[KEEP_AX]
+		
 		jmp dword ptr cs:[Int9_vect];
 	do_req: 
 		push ax
@@ -113,9 +138,23 @@ ROUT PROC FAR
 		STI	;разрешаем прерывания
 		pop es
 	notcls:
+		cli
+		
+		mov ax,cs:[KEEP_SS]
+		mov ss,ax
+		mov sp,cs:[KEEP_SP]
+		
+		sti
+		
 		IRET		
 		Int9_vect dd ?		
 		typeKey db 0 ; 0 if q-p , 1 if n , 2 if del
+		
+		KEEP_SS dw 0
+		KEEP_SP dw 0
+		KEEP_AX dw 0
+		M_P dw 0
+		M_S dw 0
 ROUT  ENDP  
 ;-----------------------------------
 IsUnload PROC
