@@ -161,7 +161,7 @@ IsUnload PROC
 	;Tail of command line
 	push es
 	push ax
-	mov ax, psp
+	mov ax, cs:[PSP]
 	mov es, ax
 	mov cl, es:[80h]
 	mov dl, cl
@@ -220,19 +220,26 @@ UnLoad proc
 	mov ds, ax
 	mov ah, 25h
 	mov al, 09h
-	int 21h          ; восстанавливаем вектор
+	int 21h          
 	pop ds
 	STI
-	ret
+		ret
 Unload endp
 ;-----------------------------------
 MakeResident proc
 	lea dx, strld
 	call WRITE
-	lea dx, temp
-	sub dx, psp
-	mov cl, 4
-	shr dx, cl
+	
+	
+	mov dx, ss
+	sub dx, CS:[PSP]
+	mov cl,4
+	shl dx, cl		
+	add dx, 410h	
+	shr dx, cl	
+	
+	mov  CS:[M_S], SS
+	mov  CS:[M_P], sp
 	mov Ax, 3100h
 	int 21h
 	ret
@@ -251,7 +258,7 @@ Main PROC  FAR
 	mov ax, @DATA		  
 	mov ds, ax
 	mov ax, es
-	mov psp, ax
+	mov cs:[PSP], ax
 
 	call isAlreadyLoad
 	
