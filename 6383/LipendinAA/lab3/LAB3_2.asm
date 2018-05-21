@@ -234,7 +234,12 @@ FOR_EACH_MCB:
 		mov es, ax
 
 		cmp bl, 4Dh
-		je FOR_EACH_MCB
+		je FOR_EACH_MCB	
+		
+		xor al, al
+		mov ah, 4Ch
+		int 21h
+		
 GET_ALL_MCB_DATA ENDP
 ;--------------------------------------------------------------------------------
 begin:

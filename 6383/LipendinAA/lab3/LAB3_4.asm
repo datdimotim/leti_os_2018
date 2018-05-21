@@ -236,6 +236,11 @@ FOR_EACH_MCB:
 
 		cmp bl, 4Dh
 		je FOR_EACH_MCB
+		
+		xor al, al
+		mov ah, 4Ch
+		int 21h
+		
 GET_ALL_MCB_DATA ENDP
 ;--------------------------------------------------------------------------------
 begin:
@@ -268,9 +273,6 @@ begin:
 
 	call GET_ALL_MCB_DATA
 
-	xor al, al
-	mov ah, 4Ch
-	int 21h
 	ret
 	
 	END_OF_PROGRAMM db 0
