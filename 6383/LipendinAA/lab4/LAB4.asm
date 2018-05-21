@@ -15,9 +15,22 @@ MY_INT PROC FAR
 	KEEP_CS dw 0                                  
 	KEEP_IP dw 0                                 
 	INT_SET dw 0FEDCh                 
-	INT_COUNT db 'Interrupts call count: 0000  $' 
+	INT_COUNT db 'Interrupts call count: 0000  $'
+	INT_STACK	DW 	64 dup (?)
+	KEEP_SS DW 0
+	KEEP_AX	DW 	?
+    KEEP_SP DW 0	
 
 FUNC_FOR_START:
+
+	mov KEEP_SS, SS
+	mov KEEP_AX, AX
+	mov KEEP_SP, SP
+	mov AX, seg INT_STACK
+	mov SS, AX
+	mov SP, 0
+	mov AX, KEEP_AX
+	
 	push ax      
 	push bx
 	push cx
@@ -100,7 +113,12 @@ END_CALC:
 	pop dx
 	pop cx
 	pop bx
-	pop ax     
+	pop ax
+
+	mov AX, KEEP_SS
+	mov SS, AX
+	mov SP, KEEP_SP
+	mov AX, KEEP_AX	
 
 	iret
 MY_INT ENDP
