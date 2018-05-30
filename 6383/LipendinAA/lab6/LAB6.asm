@@ -29,6 +29,73 @@ BYTE_TO_HEX		PROC near
 		ret
 BYTE_TO_HEX		ENDP
 ;--------------------------
+PREP PROC
+	mov ax,STACK
+	sub ax,CODE
+	add ax,100h
+	mov bx,ax
+	mov ah,4ah
+	int 21h
+	jnc PREP_SKIP
+	call RUN_MODULE
+	PREP_SKIP:
+	call PARMS_CREATE
+	; определяем путь до программы:
+	push es
+	push bx
+	push si
+	push ax
+	mov es,es:[2ch] ; в es сегментный адрес среды
+	mov bx,-1
+	ENV:
+		add bx,1
+		cmp word ptr es:[bx],0000h
+		jne ENV
+	add bx,4
+	mov si,-1
+	STEP1:
+		add si,1
+		mov al,es:[bx+si]
+		mov MODULE_PATH[si],al
+		cmp byte ptr es:[bx+si],00h
+		jne STEP1
+	
+	; избавляемся от названия программы в пути
+	add si,1
+	STEP2:
+		mov MODULE_PATH[si],0
+		sub si,1
+		cmp byte ptr es:[bx+si],'\'
+		jne STEP2
+	; добавляем имя запускаем программы
+	add si,1
+	mov MODULE_PATH[si],'L'
+	add si,1
+	mov MODULE_PATH[si],'A'
+	add si,1
+	mov MODULE_PATH[si],'B'
+	add si,1
+	mov MODULE_PATH[si],'2'
+	add si,1
+	mov MODULE_PATH[si],'_'
+	add si,1
+	mov MODULE_PATH[si],'M'
+	add si,1
+	mov MODULE_PATH[si],'.'
+	add si,1
+	mov MODULE_PATH[si],'C'
+	add si,1
+	mov MODULE_PATH[si],'O'
+	add si,1
+	mov MODULE_PATH[si],'M'
+	pop ax
+	pop si
+	pop bx
+	pop es	
+	
+	ret
+PREP ENDP
+;--------------------------
 FREE_MEM PROC
 		mov ax,STACK
 		mov bx,es
@@ -73,7 +140,7 @@ PARMS_CREATE ENDP
 RUN_MODULE PROC
 		mov dx,offset ENDL
 		call PRINT
-		mov dx,offset SET_MODULE_PATH
+		mov dx,offset MODULE_PATH
 		xor ch,ch
 		mov cl,es:[80h]
 		cmp cx,0
@@ -168,7 +235,7 @@ BEGIN:
 	mov ax,DATA
 	mov ds,ax
 	call FREE_MEM
-	call PARMS_CREATE
+	call PREP
 	call RUN_MODULE
 	xor AL,AL
 	mov AH,4Ch
@@ -196,8 +263,7 @@ DATA SEGMENT
 								dd ? 
 								dd 0 
 								dd 0  
-	MODULE_PATH  				db 50h dup ('$')
-	SET_MODULE_PATH				db 'LAB2_M.COM',0
+	MODULE_PATH  				db 50h dup (0)
 	KEEP_SS 					dw 0
 	KEEP_SP 					dw 0
 DATA ENDS
