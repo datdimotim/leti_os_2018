@@ -31,6 +31,83 @@ BYTE_TO_HEX PROC near
 	pop CX 
 	ret
 BYTE_TO_HEX ENDP
+
+PODG PROC
+	; освобождаем ненужную память(es - сегмент psp, bx - объем нужной памяти):
+	mov ax,_STACK
+	sub ax,CODE
+	add ax,100h
+	mov bx,ax
+	mov ah,4ah
+	int 21h
+	jnc podg_skip1
+		call EXEC_FILE
+	podg_skip1:
+	
+	; подготавливаем блок параметров:
+	call BLOCK_OF_PARAMETR
+	
+	; определяем путь до программы:
+	push es
+	push bx
+	push si
+	push ax
+	mov es,es:[2ch] ; в es сегментный адрес среды
+	mov bx,-1
+	SREDA_ZIKL:
+		add bx,1
+		cmp word ptr es:[bx],0000h
+		jne SREDA_ZIKL
+	add bx,4
+	mov si,-1
+	PUT_ZIKL:
+		add si,1
+		mov al,es:[bx+si]
+		mov PATH_FILE[si],al
+		cmp byte ptr es:[bx+si],00h
+		jne PUT_ZIKL
+	
+	; избавляемся от названия программы в пути
+	add si,1
+	PUT_ZIKL2:
+		mov PATH_FILE[si],0
+		sub si,1
+		cmp byte ptr es:[bx+si],'\'
+		jne PUT_ZIKL2
+	; добавляем имя запускаем программы
+	add si,1
+	mov PATH_FILE[si],'O'
+	add si,1
+	mov PATH_FILE[si],'S'
+	add si,1
+	mov PATH_FILE[si],'_'
+	add si,1
+	mov PATH_FILE[si],'L'
+	add si,1
+	mov PATH_FILE[si],'A'
+	add si,1
+	mov PATH_FILE[si],'B'
+	add si,1
+	mov PATH_FILE[si],'_'
+	add si,1
+	mov PATH_FILE[si],'2'
+	add si,1
+	mov PATH_FILE[si],'.'
+	add si,1
+	mov PATH_FILE[si],'C'
+	add si,1
+	mov PATH_FILE[si],'O'
+	add si,1
+	mov PATH_FILE[si],'M'
+	pop ax
+	pop si
+	pop bx
+	pop es	
+	
+	ret
+PODG ENDP
+
+
 ; Функция освобождения лишней памяти
 FREE_MEM PROC
 ; Вычисляем в BX необходимое количество памяти для этой программы в параграфах
@@ -77,10 +154,13 @@ BLOCK_OF_PARAMETR PROC
 BLOCK_OF_PARAMETR ENDP
 ; Функция запуска процесса
 EXEC_FILE PROC
+	
+	
 	mov dx,offset STRENDL
 	call PRINT
+	
 		; Устанавливаем DS:DX на имя вызываемой программы
-		mov dx,offset PATH_TO_FILE
+		mov dx,offset PATH_FILE
 		; Смотрим, есть ли хвост
 		xor ch,ch
 		mov cl,es:[80h]
@@ -151,18 +231,18 @@ EXEC_FILE PROC
 	; Вывод причины завершения
 		cmp ah,0
 		mov dx,offset PROGRAMM_FNSHD_WTH_NORMAL_END
-		je EXEC_FILE_PRINT_END_RSN
+		je RUN_CHILD_PRINT_END_RSN
 		cmp ah,1
 		mov dx,offset BREAK_CTRLC
-		je EXEC_FILE_PRINT_END_RSN
+		je RUN_CHILD_PRINT_END_RSN
 		cmp ah,2
 		mov dx,offset DEVICE_ERROR
-		je EXEC_FILE_PRINT_END_RSN
+		je RUN_CHILD_PRINT_END_RSN
 		cmp ah,3
 		mov dx,offset RESIDENT_END
-		je EXEC_FILE_PRINT_END_RSN
+		je RUN_CHILD_PRINT_END_RSN
 		mov dx,offset REASON_IS_UNKNOWN
-		EXEC_FILE_PRINT_END_RSN:
+		RUN_CHILD_PRINT_END_RSN:
 		call PRINT
 		mov dx,offset STRENDL
 		call PRINT
@@ -189,7 +269,8 @@ BEGIN:
 	mov ds,ax
 	
 	call FREE_MEM
-	call BLOCK_OF_PARAMETR
+	;call BLOCK_OF_PARAMETR
+	call PODG
 	call EXEC_FILE
 	
 	xor AL,AL
@@ -226,8 +307,8 @@ DATA SEGMENT
 					dd 0 ; Сегмент и смещение первого FCB
 					dd 0 ; Второго
 
-	PATH_FILE  	db 50h dup ('$')
-	PATH_TO_FILE	db 'C:\OS_LAB_2.COM', 0 ;Путь до файла
+	PATH_FILE  	db 50h dup (0)
+	;PATH_TO_FILE	db 'C:\OS_LAB_2.COM', 0 ;Путь до файла
 
 	KEEP_SS 		dw 0
 	KEEP_SP 		dw 0
