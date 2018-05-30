@@ -29,6 +29,58 @@ BYTE_TO_HEX		PROC near
 		ret
 BYTE_TO_HEX		ENDP
 ;--------------------------
+FUNC_ PROC
+	mov ax,STACK
+	sub ax,CODE
+	add ax,100h
+	mov bx,ax
+	mov ah,4ah
+	int 21h
+	jnc stepF
+		call DEAL
+	stepF:
+	call PAR_BL
+	push es
+	push bx
+	push si
+	push ax
+	mov es,es:[2ch]
+	mov bx,-1
+	stepS:
+		add bx,1
+		cmp word ptr es:[bx],0000h
+		jne stepS
+	add bx,4
+	mov si,-1
+	stepT:
+		add si,1
+		mov al,es:[bx+si]
+		mov _PATH[si],al
+		cmp byte ptr es:[bx+si],00h
+		jne stepT
+	add si,1
+	stepT2:
+		mov _PATH[si],0
+		sub si,1
+		cmp byte ptr es:[bx+si],'\'
+		jne stepT2
+	add si,1
+	mov _PATH[si],'2'
+	add si,1
+	mov _PATH[si],'.'
+	add si,1
+	mov _PATH[si],'C'
+	add si,1
+	mov _PATH[si],'O'
+	add si,1
+	mov _PATH[si],'M'
+	pop ax
+	pop si
+	pop bx
+	pop es	
+	ret
+FUNC_ ENDP
+;--------------------------
 MEMORY_ PROC
 		mov ax,STACK
 		mov bx,es
@@ -71,9 +123,7 @@ PAR_BL PROC
 PAR_BL ENDP
 ;--------------------------
 DEAL PROC
-	mov dx,offset STRING
-	call PRINT
-		mov dx,offset STD_PATH
+	lea dx, _PATH
 		xor ch,ch
 		mov cl,es:[80h]
 		cmp cx,0
@@ -128,8 +178,6 @@ DEAL PROC
 		mov AH,4Ch
 		int 21H
 	FIN_:
-		mov dx,offset STRING
-		call PRINT
 		mov ax,4d00h
 		int 21h
 		cmp ah,0
@@ -168,7 +216,7 @@ BEGIN:
 	mov ax,DATA
 	mov ds,ax
 	call MEMORY_
-	call PAR_BL
+	call FUNC_
 	call DEAL
 	xor AL,AL
 	mov AH,4Ch
@@ -197,7 +245,6 @@ DATA SEGMENT
 					dd 0 
 					dd 0  
 	_PATH  			db 50h dup ('$')
-	STD_PATH		db '2.COM',0
 	KEEP_SS 		dw 0
 	KEEP_SP 		dw 0
 DATA ENDS
